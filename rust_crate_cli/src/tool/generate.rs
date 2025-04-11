@@ -268,7 +268,8 @@ fn trace_enum(traced: &mut Traced, item: &ItemEnum) {
   let variants: BTreeMap<u32, Named<VariantFormat>> = item
     .variants
     .iter()
-    .map(|variant| {
+    .enumerate()
+    .map(|(enum_index, variant)| {
       let name = variant.ident.to_string();
       let variant_format = match &variant.fields {
         syn::Fields::Unit => VariantFormat::Unit,
@@ -300,13 +301,32 @@ fn trace_enum(traced: &mut Traced, item: &ItemEnum) {
           VariantFormat::Struct(fields)
         }
       };
-      Named {
-        name,
-        value: variant_format,
+
+      let mut index = enum_index as u32;
+      if let Some((_, expr)) = &variant.discriminant {
+        if let syn::Expr::Lit(lit_expr) = expr {
+          if let syn::Lit::Int(int_lit) = &lit_expr.lit {
+            let raw_value = int_lit.base10_digits();
+
+            index =
+              if raw_value.starts_with("0x") || raw_value.starts_with("0X") {
+                u32::from_str_radix(&raw_value[2..], 16)
+                  .unwrap_or(enum_index as u32)
+              } else {
+                int_lit.base10_parse::<u32>().unwrap_or(enum_index as u32)
+              }
+          }
+        }
       }
+
+      (
+        index,
+        Named {
+          name,
+          value: variant_format,
+        },
+      )
     })
-    .enumerate()
-    .map(|(index, value)| (index as u32, value))
     .collect();
 
   let container = ContainerFormat::Enum(variants);
