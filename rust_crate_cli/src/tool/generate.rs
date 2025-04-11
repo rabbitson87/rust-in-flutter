@@ -303,18 +303,16 @@ fn trace_enum(traced: &mut Traced, item: &ItemEnum) {
       };
 
       let mut index = enum_index as u32;
-      if let Some((_, expr)) = &variant.discriminant {
-        if let syn::Expr::Lit(lit_expr) = expr {
-          if let syn::Lit::Int(int_lit) = &lit_expr.lit {
-            let raw_value = int_lit.base10_digits();
+      if let Some((_, syn::Expr::Lit(lit_expr))) = &variant.discriminant {
+        if let syn::Lit::Int(int_lit) = &lit_expr.lit {
+          let raw_value = int_lit.base10_digits();
 
-            index =
-              if raw_value.starts_with("0x") || raw_value.starts_with("0X") {
-                u32::from_str_radix(&raw_value[2..], 16)
-                  .unwrap_or(enum_index as u32)
-              } else {
-                int_lit.base10_parse::<u32>().unwrap_or(enum_index as u32)
-              }
+          index = if raw_value.starts_with("0x") || raw_value.starts_with("0X")
+          {
+            u32::from_str_radix(&raw_value[2..], 16)
+              .unwrap_or(enum_index as u32)
+          } else {
+            int_lit.base10_parse::<u32>().unwrap_or(enum_index as u32)
           }
         }
       }
